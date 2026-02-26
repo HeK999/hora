@@ -527,7 +527,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def main(argv: list[str] | None = None) -> None:
+def _main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     check_for_updates(skip_requested=args.skip_update_check)
 
@@ -624,6 +624,14 @@ def main(argv: list[str] | None = None) -> None:
 
         print(f"Client {client_id}: autorun.brs geschrieben: {client_autorun.relative_to(root)}")
         client_id += 1
+
+
+def main(argv: list[str] | None = None) -> None:
+    try:
+        _main(argv)
+    except KeyboardInterrupt:
+        print("\nAbbruch durch Benutzer (Ctrl+C).")
+        sys.exit(130)
 
 
 if __name__ == "__main__":
