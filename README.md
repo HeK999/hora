@@ -14,7 +14,7 @@
 SSH:
 
 ```bash
-pipx install "git remote add origin git@github.com:HeK999/hora.git@main"
+pipx install "git+ssh://git@github.com/HeK999/hora.git@main"
 ```
 
 HTTPS (Fallback):
@@ -39,7 +39,7 @@ Falls bisher ein lokaler Symlink verwendet wurde (z. B. `/usr/local/bin/hora -> 
 
 ```bash
 rm /usr/local/bin/hora
-pipx install "git+ssh://git@github.com/<ORG>/<REPO>.git@main"
+pipx install "git+ssh://git@github.com:HeK999/hora.git@main"
 ```
 
 ## Nutzung
