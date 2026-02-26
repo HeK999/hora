@@ -474,7 +474,7 @@ def move_root_videos_to_role_directories(
     client_id = 1
 
     for path in matches:
-        target_dir_name = "master" if path == main_file else f"client_{client_id}"
+        target_dir_name = "main" if path == main_file else f"client_{client_id}"
         target_dir = root / target_dir_name
         if target_dir.exists():
             raise RuntimeError(
@@ -647,7 +647,7 @@ def _main(argv: list[str] | None = None) -> None:
         except RuntimeError as err:
             print(f"Abbruch: {err}")
             sys.exit(1)
-        print("Mehrere Videos im Grundverzeichnis erkannt. Dateien wurden nach master/client_* verschoben.")
+        print("Mehrere Videos im Grundverzeichnis erkannt. Dateien wurden nach main/client_* verschoben.")
 
     save_main_selection(root, main_file)
     print(f"Gespeichert als Main: {main_file.relative_to(root)}")
