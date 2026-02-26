@@ -30,6 +30,7 @@ VIDEO_EXTENSIONS = {
     ".3gp",
 }
 MAIN_SELECTION_FILENAME = ".hora_main_selection.json"
+MAIN_SELECTION_ROOT_KEY = "root_dir"
 ANSI_ORANGE = "\033[38;5;208m"
 ANSI_RESET = "\033[0m"
 UPDATE_SKIP_ENV = "HORA_SKIP_UPDATE_CHECK"
@@ -450,6 +451,12 @@ def load_main_selection(root: Path) -> Path | None:
     except (json.JSONDecodeError, OSError):
         return None
 
+    saved_root_dir = data.get(MAIN_SELECTION_ROOT_KEY)
+    if not isinstance(saved_root_dir, str):
+        return None
+    if saved_root_dir != str(root.resolve()):
+        return None
+
     main_rel_path = data.get("main")
     if not isinstance(main_rel_path, str) or not main_rel_path.strip():
         return None
@@ -457,12 +464,17 @@ def load_main_selection(root: Path) -> Path | None:
     main_path = root / main_rel_path
     if not main_path.exists():
         return None
+    if not main_path.resolve().is_relative_to(root.resolve()):
+        return None
     return main_path
 
 
 def save_main_selection(root: Path, main_path: Path) -> None:
     selection_file = root / MAIN_SELECTION_FILENAME
-    payload = {"main": str(main_path.relative_to(root))}
+    payload = {
+        MAIN_SELECTION_ROOT_KEY: str(root.resolve()),
+        "main": str(main_path.relative_to(root)),
+    }
     selection_file.write_text(
         json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
