@@ -433,6 +433,76 @@ def find_video_files(root: Path) -> list[Path]:
     )
 
 
+def find_subdirectories_with_multiple_videos(
+    root: Path, matches: list[Path]
+) -> dict[Path, list[Path]]:
+    videos_by_dir: dict[Path, list[Path]] = {}
+    for path in matches:
+        videos_by_dir.setdefault(path.parent, []).append(path)
+
+    return {
+        directory: sorted(paths)
+        for directory, paths in videos_by_dir.items()
+        if directory != root and len(paths) > 1
+    }
+
+
+def print_subdirectory_video_warning(root: Path, violations: dict[Path, list[Path]]) -> None:
+    print(
+        orange_text(
+            "WARNUNG: In mindestens einem Unterverzeichnis wurden mehrere Video-Dateien gefunden."
+        )
+    )
+    for directory in sorted(violations):
+        rel_dir = directory.relative_to(root)
+        file_names = ", ".join(path.name for path in violations[directory])
+        print(orange_text(f"- {rel_dir}: {file_names}"))
+    print("Bitte behebe das Problem und starte hora erneut.")
+
+
+def should_reorganize_root_videos(root: Path, matches: list[Path]) -> bool:
+    has_directories = any(entry.is_dir() for entry in root.iterdir())
+    if has_directories:
+        return False
+    return len(matches) > 1 and all(path.parent == root for path in matches)
+
+
+def move_root_videos_to_role_directories(
+    root: Path, matches: list[Path], main_file: Path
+) -> tuple[list[Path], Path]:
+    moved_paths: dict[Path, Path] = {}
+    client_id = 1
+
+    for path in matches:
+        target_dir_name = "master" if path == main_file else f"client_{client_id}"
+        target_dir = root / target_dir_name
+        if target_dir.exists():
+            raise RuntimeError(
+                f"Zielordner '{target_dir_name}' existiert bereits. Bitte aufräumen und erneut starten."
+            )
+
+        try:
+            target_dir.mkdir()
+        except OSError as exc:
+            raise RuntimeError(f"Ordner konnte nicht erstellt werden: {target_dir}") from exc
+
+        target_path = target_dir / path.name
+        try:
+            path.rename(target_path)
+        except OSError as exc:
+            raise RuntimeError(
+                f"Video konnte nicht verschoben werden: {path.relative_to(root)} -> {target_path.relative_to(root)}"
+            ) from exc
+
+        moved_paths[path] = target_path
+        if path != main_file:
+            client_id += 1
+
+    moved_matches = [moved_paths[path] for path in matches]
+    moved_main_file = moved_paths[main_file]
+    return moved_matches, moved_main_file
+
+
 def enforce_subfolder_limit(root: Path, max_subfolders: int = 10) -> None:
     subfolder_count = sum(1 for entry in root.iterdir() if entry.is_dir())
     if subfolder_count > max_subfolders:
@@ -544,6 +614,11 @@ def _main(argv: list[str] | None = None) -> None:
         print("Keine Video-Dateien gefunden.")
         return
 
+    subdir_violations = find_subdirectories_with_multiple_videos(root, matches)
+    if subdir_violations:
+        print_subdirectory_video_warning(root, subdir_violations)
+        sys.exit(1)
+
     current_main = load_main_selection(root)
 
     print(f"Schritt 1: Gefundene Video-Dateien in: {root}")
@@ -565,6 +640,14 @@ def _main(argv: list[str] | None = None) -> None:
             print(
                 f"Keine Eingabe möglich, erste Datei wird als Main gesetzt: {main_file.relative_to(root)}"
             )
+
+    if should_reorganize_root_videos(root, matches):
+        try:
+            matches, main_file = move_root_videos_to_role_directories(root, matches, main_file)
+        except RuntimeError as err:
+            print(f"Abbruch: {err}")
+            sys.exit(1)
+        print("Mehrere Videos im Grundverzeichnis erkannt. Dateien wurden nach master/client_* verschoben.")
 
     save_main_selection(root, main_file)
     print(f"Gespeichert als Main: {main_file.relative_to(root)}")
