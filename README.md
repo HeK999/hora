@@ -14,13 +14,13 @@
 SSH:
 
 ```bash
-pipx install "git+ssh://git@github.com/<ORG>/<REPO>.git@main"
+pipx install "git remote add origin git@github.com:HeK999/hora.git@main"
 ```
 
 HTTPS (Fallback):
 
 ```bash
-pipx install "git+https://github.com/<ORG>/<REPO>.git@main"
+pipx install "git+https://github.com/HeK999/hora.git@main"
 ```
 
 Danach ist `hora` direkt im PATH verfügbar.
